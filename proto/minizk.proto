@@ -1,0 +1,76 @@
+syntax = "proto3";
+package minizk;
+
+option java_multiple_files = true;
+option java_package = "com.minizk.rpc";
+option java_outer_classname = "MiniZKProto";
+
+// Node-to-node and client-to-node RPCs
+service MiniZK {
+  // Leader election
+  rpc RequestVote(RequestVote) returns (RequestVoteResult);
+  // Heartbeat / AppendEntries (no log entries in heartbeat)
+  rpc Heartbeat(Heartbeat) returns (HeartbeatAck);
+
+  // Replication (leader -> follower), follower acks
+  rpc AppendUpdate(AppendUpdateReq) returns (AppendUpdateResp);
+
+  // Client facing APIs
+  rpc Write(WriteRequest) returns (WriteResponse);
+  rpc Read(ReadRequest) returns (ReadResponse);
+
+  // Register a watch (server streaming WatchEvent for this session)
+  rpc RegisterWatch(RegisterWatchRequest) returns (stream WatchEvent);
+}
+
+message NodeInfo {
+  string id = 1;
+  string host = 2;
+  int32 port = 3;
+}
+
+message RequestVote {
+  string candidateId = 1;
+  int64 term = 2;
+}
+message RequestVoteResult {
+  int64 term = 1;
+  bool voteGranted = 2;
+}
+
+message Heartbeat {
+  string leaderId = 1;
+  int64 term = 2;
+}
+message HeartbeatAck {
+  int64 term = 1;
+  bool ok = 2;
+}
+
+message AppendUpdateReq {
+  int64 index = 1;
+  string path = 2;
+  string value = 3;
+  int64 term = 4;
+}
+message AppendUpdateResp {
+  bool ok = 1;
+  int64 term = 2;
+}
+
+message WriteRequest {
+  string path = 1;
+  string value = 2;
+  string clientId = 3;
+}
+message WriteResponse {
+  bool success = 1;
+  string leaderId = 2; // if redirect, leader id
+  string error = 3;
+}
+
+message ReadRequest { string path = 1; }
+message ReadResponse { string value = 1; bool found = 2; string leaderId = 3; }
+
+message RegisterWatchRequest { string path = 1; string clientId = 2; }
+message WatchEvent { string path = 1; string value = 2; int64 index = 3; }
